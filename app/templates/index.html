@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opsiyon Fiyatlama & Getiri</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+            boxShadow: { soft: '0 10px 30px rgba(0,0,0,.10)' },
+          },
+        },
+      };
+    </script>
+
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script defer src="/static/app.js"></script>
+
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+    </style>
+  </head>
+
+  <body class="bg-slate-950 text-slate-100">
+    <div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" x-data="opsiyonApp()" x-init="init()">
+      <header class="sticky top-0 z-30 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 shadow-soft"></div>
+            <div>
+              <div class="text-sm text-slate-300">VIOP / Tezgahüstü</div>
+              <div class="text-lg font-semibold">Opsiyon Fiyatlama & Getiri</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium hover:bg-white/10" @click="openSettings()" type="button">Ayarlar</button>
+            <button class="rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-400" @click="openWizard()" type="button">Yeni Hesaplama</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-5">
+        <section class="lg:col-span-2">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-soft">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-slate-400">Parametreler</div>
+                <div class="text-base font-semibold">Seçimler</div>
+              </div>
+              <div class="text-xs text-slate-400" x-text="statusText"></div>
+            </div>
+
+            <div class="mt-5 space-y-3 text-sm">
+              <div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                <div class="text-slate-400">Borsa</div>
+                <div class="font-semibold" x-text="form.market"></div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Dayanak</div>
+                  <div class="font-semibold" x-text="form.underlying"></div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Tip</div>
+                  <div class="font-semibold" x-text="form.underlying_type"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Spot</div>
+                  <div class="font-semibold" x-text="fmt(form.spot)"></div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Strike</div>
+                  <div class="font-semibold" x-text="fmt(form.strike)"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Değerleme</div>
+                  <div class="font-semibold" x-text="form.valuation_date"></div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Vade</div>
+                  <div class="font-semibold" x-text="form.expiry_date"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Opsiyon</div>
+                  <div class="font-semibold" x-text="form.option_type"></div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Yön</div>
+                  <div class="font-semibold" x-text="form.direction"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Kontrat</div>
+                  <div class="font-semibold" x-text="form.contracts"></div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Çarpan</div>
+                  <div class="font-semibold" x-text="form.contract_multiplier"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Prim (giriş)</div>
+                  <div class="font-semibold" x-text="fmt(form.premium_input)"></div>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                  <div class="text-slate-400">Faiz (yıllık %)</div>
+                  <div class="font-semibold" x-text="fmt(form.interest_rate_percent)"></div>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                <div class="text-slate-400">Vade Sonu Fiyat (ops.)</div>
+                <div class="font-semibold" x-text="form.settlement_price ? fmt(form.settlement_price) : '-' "></div>
+              </div>
+
+              <div class="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                <div class="text-slate-400">Pozisyon Açıklaması</div>
+                <div class="mt-1 whitespace-pre-line text-xs text-slate-200" x-text="optionNarrative()"></div>
+              </div>
+
+              <div class="pt-2">
+                <button class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10" @click="openWizard()" type="button">Parametreleri Düzenle</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-soft">
+            <div class="text-sm text-slate-400">Payoff (Vade Sonu)</div>
+            <div class="mt-1 text-base font-semibold">Kâr/Zarar Eğrisi</div>
+            <div class="mt-4"><canvas id="payoffChart" height="180"></canvas></div>
+          </div>
+        </section>
+
+        <section class="lg:col-span-3">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-soft">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-slate-400">Sonuçlar</div>
+                <div class="text-base font-semibold">Özet Tablo</div>
+              </div>
+              <button class="rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-400" @click="calculate()" type="button">Hesapla</button>
+            </div>
+
+            <template x-if="errorMessage">
+              <div class="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200" x-text="errorMessage"></div>
+            </template>
+
+            <template x-if="result">
+              <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Miktar / Lot</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="fmt(result.lot_amount)"></div>
+                  <div class="mt-4 text-xs text-slate-400">İşlem Büyüklüğü (TL)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="money(result.notional_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Vadeye Kalan Gün</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="result.days_to_expiry"></div>
+                  <div class="mt-4 text-xs text-slate-400">Prim (Birim TL)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="money(result.premium_per_unit_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Prim Tutarı (Brüt)</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="money(result.premium_gross_tl)"></div>
+                  <div class="mt-4 text-xs text-slate-400">Komisyon (BSMV dahil)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="money(result.commission_total_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Nema (Brüt)</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="money(result.nema_gross_tl)"></div>
+                  <div class="mt-4 text-xs text-slate-400">Nema (Net)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="money(result.nema_net_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Net Opsiyon Primi</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="money(result.net_option_premium_tl)"></div>
+                  <div class="mt-4 text-xs text-slate-400">Toplam Net Getiri (Vade Öncesi)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="money(result.net_return_before_settlement_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Mevduat Eşleniği (Net)</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="pct(result.annual_equiv_net_percent)"></div>
+                  <div class="mt-4 text-xs text-slate-400">Mevduat Eşleniği (Brüt)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="pct(result.annual_equiv_gross_percent)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Başa Baş (Faiz Dahil)</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="money(result.breakeven_price_tl)"></div>
+                  <div class="mt-4 text-xs text-slate-400">Faiz Dışı Başa Baş</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="money(result.breakeven_ex_interest_price_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div class="text-xs text-slate-400">Uzlaşma Nakit Akışı</div>
+                  <div class="mt-1 text-2xl font-semibold" x-text="result.settlement_cashflow_tl === null ? '-' : money(result.settlement_cashflow_tl)"></div>
+                  <div class="mt-4 text-xs text-slate-400">Net Kâr (Uzlaşma Dahil)</div>
+                  <div class="mt-1 text-xl font-semibold" x-text="result.net_profit_after_settlement_tl === null ? '-' : money(result.net_profit_after_settlement_tl)"></div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
+                  <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div>
+                      <div class="text-xs text-slate-400">Mevduat Eşleniği Net (Uzlaşma Dahil)</div>
+                      <div class="mt-1 text-xl font-semibold" x-text="pct(result.annual_equiv_net_after_settlement_percent)"></div>
+                    </div>
+                    <div>
+                      <div class="text-xs text-slate-400">Mevduat Eşleniği Brüt (Uzlaşma Dahil)</div>
+                      <div class="mt-1 text-xl font-semibold" x-text="pct(result.annual_equiv_gross_after_settlement_percent)"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template x-if="!result && !errorMessage">
+              <div class="mt-6 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                <div class="font-semibold">Başlamak için</div>
+                <div class="mt-1">"Yeni Hesaplama" ile parametreleri gir ve sonra "Hesapla".</div>
+              </div>
+            </template>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-soft">
+            <div class="text-sm text-slate-400">Not</div>
+            <div class="mt-1 text-sm text-slate-200">
+              Döviz (FX) dayanaklarında prim girişi varsayılan olarak <span class="font-semibold">kuruş</span> kabul edilir (ör. 59 ⇒ 0.59 TL/1 USD). Ayarlardan değiştirilebilir.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4" x-show="wizard.open" x-transition @keydown.escape.window="wizard.open = false" style="display: none">
+        <div class="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950 shadow-soft">
+          <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div>
+              <div class="text-xs text-slate-400">Adım <span x-text="wizard.step"></span> / 8</div>
+              <div class="text-base font-semibold" x-text="wizardTitle()"></div>
+            </div>
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10" @click="wizard.open = false" type="button">Kapat</button>
+          </div>
+
+          <div class="px-5 py-4">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <div x-text="wizardHint()"></div>
+              <div class="font-medium" x-text="summaryBadge()"></div>
+            </div>
+
+            <div class="mt-4 space-y-4">
+              <template x-if="wizard.step === 1">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    class="rounded-2xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
+                    :class="form.market==='VIOP' ? 'ring-2 ring-indigo-500/70' : ''"
+                    @click="form.market='VIOP'"
+                    type="button"
+                  >
+                    <div class="text-sm text-slate-300">Borsa</div>
+                    <div class="mt-1 text-lg font-semibold">VIOP</div>
+                  </button>
+
+                  <button
+                    class="rounded-2xl border border-white/10 bg-white/5 p-4 text-left hover:bg-white/10"
+                    :class="form.market==='TEZGAHUSTU' ? 'ring-2 ring-indigo-500/70' : ''"
+                    @click="form.market='TEZGAHUSTU'"
+                    type="button"
+                  >
+                    <div class="text-sm text-slate-300">Piyasa</div>
+                    <div class="mt-1 text-lg font-semibold">Tezgahüstü</div>
+                  </button>
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 2">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div class="text-sm text-slate-300">Dayanak</div>
+                    <input
+                      list="underlyings"
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      x-model="form.underlying"
+                      placeholder="USDTRY, SAHOL, GARAN..."
+                    />
+                    <datalist id="underlyings">
+                      <option value="USDTRY"></option>
+                      <option value="EURTRY"></option>
+                      <option value="XU100"></option>
+                      <option value="SAHOL"></option>
+                      <option value="GARAN"></option>
+                      <option value="THYAO"></option>
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <div class="text-sm text-slate-300">Dayanak Tipi</div>
+                    <select
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      x-model="form.underlying_type"
+                      @change="ensureMultiplier()"
+                    >
+                      <option value="FX">Döviz (FX)</option>
+                      <option value="EQUITY">Hisse (Equity)</option>
+                    </select>
+                    <div class="mt-1 text-xs text-slate-400">FX=1000, Hisse=100 önerilir.</div>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 3">
+                <div>
+                  <div class="text-sm text-slate-300">Spot Fiyat</div>
+                  <input
+                    class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                    type="number"
+                    step="0.0001"
+                    x-model.number="form.spot"
+                  />
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 4">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div class="text-sm text-slate-300">Değerleme Tarihi</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="date"
+                      x-model="form.valuation_date"
+                    />
+                  </div>
+
+                  <div>
+                    <div class="text-sm text-slate-300">Vade Tarihi</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="date"
+                      x-model="form.expiry_date"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 5">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div class="text-sm text-slate-300">Opsiyon Tipi</div>
+                    <select class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" x-model="form.option_type">
+                      <option value="CALL">CALL</option>
+                      <option value="PUT">PUT</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <div class="text-sm text-slate-300">İşlem Yönü</div>
+                    <select class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" x-model="form.direction">
+                      <option value="LONG">LONG (Alış)</option>
+                      <option value="SHORT">SHORT (Satış)</option>
+                    </select>
+                  </div>
+
+                  <div class="md:col-span-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <div class="text-xs text-slate-400">Seçime göre açıklama</div>
+                    <div class="mt-2 whitespace-pre-line text-sm text-slate-200" x-text="optionNarrative()"></div>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 6">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div class="text-sm text-slate-300">Strike (Kullanım Fiyatı)</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="number"
+                      step="0.0001"
+                      x-model.number="form.strike"
+                    />
+                  </div>
+
+                  <div>
+                    <div class="text-sm text-slate-300">Kontrat Adedi</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="number"
+                      step="1"
+                      min="1"
+                      x-model.number="form.contracts"
+                    />
+                  </div>
+
+                  <div class="md:col-span-2">
+                    <div class="text-sm text-slate-300">Kontrat Çarpanı</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="number"
+                      step="1"
+                      min="1"
+                      x-model.number="form.contract_multiplier"
+                    />
+                    <div class="mt-1 text-xs text-slate-400">Hisse için genelde 100, USDTRY gibi FX için genelde 1000.</div>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 7">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div class="text-sm text-slate-300">Prim (Fiyatlama Ekranı)</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="number"
+                      step="0.0001"
+                      x-model.number="form.premium_input"
+                    />
+                    <div class="mt-1 text-xs text-slate-400" x-show="form.underlying_type==='FX'">FX için 59 ⇒ 0.59 TL olacak şekilde ölçeklenir.</div>
+                  </div>
+
+                  <div>
+                    <div class="text-sm text-slate-300">Nemalandırma Faizi (yıllık %)</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="number"
+                      step="0.01"
+                      x-model.number="form.interest_rate_percent"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="wizard.step === 8">
+                <div>
+                  <div class="text-sm text-slate-300">Vade Sonu Fiyat (opsiyonel)</div>
+                  <input
+                    class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                    type="number"
+                    step="0.0001"
+                    x-model.number="form.settlement_price"
+                    placeholder="Boş bırakabilirsin"
+                  />
+                  <div class="mt-1 text-xs text-slate-400">Girersen uzlaşma nakit akışı ve net kâr hesaplanır.</div>
+                </div>
+              </template>
+            </div>
+
+            <div class="mt-6 flex items-center justify-between">
+              <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10" :disabled="wizard.step===1" :class="wizard.step===1 ? 'opacity-40 cursor-not-allowed' : ''" @click="wizardPrev()" type="button">Geri</button>
+
+              <div class="flex items-center gap-2">
+                <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10" @click="wizard.open=false" type="button">Vazgeç</button>
+                <button class="rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-400" @click="wizardNext()" type="button" x-text="wizard.step===8 ? 'Bitir & Hesapla' : 'Devam'"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" x-show="settingsOpen" x-transition @keydown.escape.window="settingsOpen = false" style="display: none">
+        <div class="w-full max-w-xl rounded-2xl border border-white/10 bg-slate-950 shadow-soft">
+          <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div>
+              <div class="text-xs text-slate-400">Gizli Parametreler</div>
+              <div class="text-base font-semibold">Ayarlar</div>
+            </div>
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10" @click="settingsOpen=false" type="button">Kapat</button>
+          </div>
+
+          <div class="px-5 py-4 space-y-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <div class="text-sm text-slate-300">Komisyon (binde)</div>
+                <input class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" type="number" step="0.01" x-model.number="settings.commission_per_mille" />
+              </div>
+              <div>
+                <div class="text-sm text-slate-300">BSMV (%)</div>
+                <input class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" type="number" step="0.01" x-model.number="settings.bsmv_percent" />
+              </div>
+              <div>
+                <div class="text-sm text-slate-300">Stopaj (%)</div>
+                <input class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" type="number" step="0.01" x-model.number="settings.stopaj_percent" />
+              </div>
+              <div>
+                <div class="text-sm text-slate-300">FX Prim Ölçeği</div>
+                <input class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" type="number" step="0.0001" x-model.number="settings.fx_premium_scale" />
+                <div class="mt-1 text-xs text-slate-400">59 kuruş için 0.01</div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+              <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10" @click="resetSettings()" type="button">Sıfırla</button>
+              <button class="rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-400" @click="saveSettings(); settingsOpen=false" type="button">Kaydet</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
