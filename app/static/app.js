@@ -361,78 +361,99 @@ function opsiyonApp() {
 
         this.result = await res.json();
         this.statusText = 'Tamam';
-        this.safeRenderChart();
       } catch (e) {
         this.result = null;
         this.errorMessage = String(e?.message || e);
         this.statusText = 'Hata';
-      }
-    },
-
-    safeRenderChart() {
-      const canvas = document.getElementById('payoffChart');
-      if (!canvas) return;
-
-      const k = Number(this.form.strike || 0);
-      const lot = Number(this.form.contracts || 0) * Number(this.form.contract_multiplier || 0);
-      if (!(k > 0) || !(lot > 0)) return;
-
-      const optionType = this.form.option_type;
-      const direction = this.form.direction;
-
-      const signs = direction === 'LONG' ? { intrinsic: +1 } : { intrinsic: -1 };
-
-      const rangeLow = k * 0.85;
-      const rangeHigh = k * 1.15;
-      const steps = 40;
-
-      const xs = [];
-      const ys = [];
-      for (let i = 0; i <= steps; i++) {
-        const s = rangeLow + (i * (rangeHigh - rangeLow)) / steps;
-        let intrinsic = 0;
-        if (optionType === 'CALL') intrinsic = Math.max(s - k, 0);
-        else intrinsic = Math.max(k - s, 0);
-
-        const payoff = signs.intrinsic * intrinsic * lot;
-        xs.push(s);
-        ys.push(payoff);
-      }
-
-      if (this.chart) {
-        this.chart.data.labels = xs.map((v) => v.toFixed(4));
-        this.chart.data.datasets[0].data = ys;
-        this.chart.update();
         return;
       }
 
-      this.chart = new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels: xs.map((v) => v.toFixed(4)),
-          datasets: [
-            {
-              label: 'Uzlaşma Nakit Akışı (TL)',
-              data: ys,
-              borderColor: 'rgba(99,102,241,1)',
-              backgroundColor: 'rgba(99,102,241,.15)',
-              fill: true,
-              tension: 0.25,
-              pointRadius: 0,
+      this.safeRenderChart();
+    },
+
+    safeRenderChart() {
+      try {
+        const ChartCtor = window.Chart;
+        if (!ChartCtor) return;
+
+        const canvas = document.getElementById('payoffChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const k = Number(this.form.strike || 0);
+        const lot = Number(this.form.contracts || 0) * Number(this.form.contract_multiplier || 0);
+        if (!(k > 0) || !(lot > 0)) return;
+
+        const optionType = this.form.option_type;
+        const direction = this.form.direction;
+
+        const signs = direction === 'LONG' ? { intrinsic: +1 } : { intrinsic: -1 };
+
+        const rangeLow = k * 0.85;
+        const rangeHigh = k * 1.15;
+        const steps = 40;
+
+        const xs = [];
+        const ys = [];
+        for (let i = 0; i <= steps; i++) {
+          const s = rangeLow + (i * (rangeHigh - rangeLow)) / steps;
+          let intrinsic = 0;
+          if (optionType === 'CALL') intrinsic = Math.max(s - k, 0);
+          else intrinsic = Math.max(k - s, 0);
+
+          const payoff = signs.intrinsic * intrinsic * lot;
+          xs.push(s);
+          ys.push(payoff);
+        }
+
+        if (this.chart) {
+          if (!this.chart.data || !this.chart.data.datasets || !this.chart.data.datasets[0]) {
+            try {
+              this.chart.destroy();
+            } catch (_) {}
+            this.chart = null;
+          }
+        }
+
+        if (this.chart) {
+          this.chart.data.labels = xs.map((v) => v.toFixed(4));
+          this.chart.data.datasets[0].data = ys;
+          this.chart.update();
+          return;
+        }
+
+        this.chart = new ChartCtor(ctx, {
+          type: 'line',
+          data: {
+            labels: xs.map((v) => v.toFixed(4)),
+            datasets: [
+              {
+                label: 'Uzlaşma Nakit Akışı (TL)',
+                data: ys,
+                borderColor: 'rgba(99,102,241,1)',
+                backgroundColor: 'rgba(99,102,241,.12)',
+                fill: false,
+                tension: 0.25,
+                pointRadius: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            animation: false,
+            plugins: {
+              legend: { display: true, labels: { color: 'rgba(226,232,240,0.9)' } },
             },
-          ],
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: true, labels: { color: 'rgba(226,232,240,0.9)' } },
+            scales: {
+              x: { ticks: { color: 'rgba(148,163,184,0.9)', maxTicksLimit: 6 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+              y: { ticks: { color: 'rgba(148,163,184,0.9)' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+            },
           },
-          scales: {
-            x: { ticks: { color: 'rgba(148,163,184,0.9)', maxTicksLimit: 6 }, grid: { color: 'rgba(255,255,255,0.06)' } },
-            y: { ticks: { color: 'rgba(148,163,184,0.9)' }, grid: { color: 'rgba(255,255,255,0.06)' } },
-          },
-        },
-      });
+        });
+      } catch (e) {
+        console.error('payoffChart render error', e);
+      }
     },
   };
 }
