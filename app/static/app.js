@@ -49,6 +49,20 @@ function opsiyonApp() {
       this.ensureMultiplier();
       this.statusText = 'Hazır';
       this.safeRenderChart();
+
+      this.registerServiceWorker();
+    },
+
+    registerServiceWorker() {
+      try {
+        if (!('serviceWorker' in navigator)) return;
+        // PWA için SW sadece HTTPS veya localhost üzerinde çalışır
+        navigator.serviceWorker.register('/sw.js').catch((e) => {
+          console.warn('serviceWorker register failed', e);
+        });
+      } catch (e) {
+        console.warn('serviceWorker register error', e);
+      }
     },
 
     fmt(v) {

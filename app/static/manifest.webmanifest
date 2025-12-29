@@ -1,0 +1,18 @@
+{
+  "name": "Opsiyon Fiyatlama & Getiri",
+  "short_name": "Opsiyon",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#6366f1",
+  "description": "VIOP / Tezgahüstü opsiyon işlemleri için prim, komisyon, nema ve uzlaşma hesaplama.",
+  "icons": [
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
