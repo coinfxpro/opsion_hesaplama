@@ -5,9 +5,14 @@ from enum import Enum
 from pydantic import BaseModel, Field, model_validator
 
 
+class SettlementType(str, Enum):
+    CASH = "CASH"
+    PHYSICAL = "PHYSICAL"
+
+
 class Market(str, Enum):
     VIOP = "VIOP"
-    OTC = "TEZGAHUSTU"
+    OTC = "OTC"
 
 
 class UnderlyingType(str, Enum):
@@ -53,6 +58,7 @@ class CalcIn(BaseModel):
     premium_input: float = Field(ge=0)
     interest_rate_percent: float = Field(ge=0)
 
+    settlement_type: SettlementType = Field(default=SettlementType.CASH)
     settlement_price: float | None = Field(default=None, gt=0)
 
     settings: SettingsIn = Field(default_factory=SettingsIn)

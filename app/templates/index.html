@@ -72,8 +72,8 @@
 
             <div class="mt-5 space-y-3 text-sm">
               <div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
-                <div class="text-slate-400">Borsa</div>
-                <div class="font-semibold" x-text="form.market"></div>
+                <div class="text-slate-400">Piyasa / Uzlaşma</div>
+                <div class="font-semibold" x-text="form.market + ' / ' + (form.settlement_type === 'CASH' ? 'Nakdi' : 'Fiziki')"></div>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
@@ -467,16 +467,26 @@
               </template>
 
               <template x-if="wizard.step === 8">
-                <div>
-                  <div class="text-sm text-slate-300">Vade Sonu Fiyat (opsiyonel)</div>
-                  <input
-                    class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-                    type="number"
-                    step="0.0001"
-                    x-model.number="form.settlement_price"
-                    placeholder="Boş bırakabilirsin"
-                  />
-                  <div class="mt-1 text-xs text-slate-400">Girersen uzlaşma nakit akışı ve net kâr hesaplanır.</div>
+                <div class="space-y-4">
+                  <div>
+                    <div class="text-sm text-slate-300">Uzlaşma Yöntemi</div>
+                    <select class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" x-model="form.settlement_type">
+                      <option value="CASH">Nakdi Uzlaşma (Cash)</option>
+                      <option value="PHYSICAL">Fiziki Uzlaşma (Physical)</option>
+                    </select>
+                    <div class="mt-1 text-xs text-slate-400">VIOP FX genelde Nakdi uzlaşmadır. OTC için seçim önemlidir.</div>
+                  </div>
+                  <div>
+                    <div class="text-sm text-slate-300">Vade Sonu Fiyat (opsiyonel)</div>
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                      type="number"
+                      step="0.0001"
+                      x-model.number="form.settlement_price"
+                      placeholder="Boş bırakabilirsin"
+                    />
+                    <div class="mt-1 text-xs text-slate-400">Vade sonu spot/uzlaşma fiyatını girerek kâr/zararı gör.</div>
+                  </div>
                 </div>
               </template>
             </div>
@@ -520,7 +530,7 @@
               <div>
                 <div class="text-sm text-slate-300">FX Prim Ölçeği</div>
                 <input class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm" type="number" step="0.0001" x-model.number="settings.fx_premium_scale" />
-                <div class="mt-1 text-xs text-slate-400">59 kuruş için 0.01</div>
+                <div class="mt-1 text-xs text-slate-400">BIST 410.0 için 0.001</div>
               </div>
             </div>
 

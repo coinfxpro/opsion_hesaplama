@@ -17,10 +17,11 @@ function opsiyonApp() {
     strike: 43,
     option_type: 'PUT',
     direction: 'SHORT',
-    contracts: 10,
+    contracts: 1,
     contract_multiplier: 1000,
-    premium_input: 59,
+    premium_input: 410,
     interest_rate_percent: 37,
+    settlement_type: 'CASH',
     settlement_price: null,
   });
 
@@ -28,7 +29,7 @@ function opsiyonApp() {
     commission_per_mille: 5.0,
     bsmv_percent: 5.0,
     stopaj_percent: 17.5,
-    fx_premium_scale: 0.01,
+    fx_premium_scale: 0.001,
   });
 
   return {
@@ -177,28 +178,28 @@ function opsiyonApp() {
 
     wizardTitle() {
       const titles = {
-        1: 'Borsa',
+        1: 'Piyasa Seçimi',
         2: 'Dayanak Varlık',
         3: 'Spot Fiyat',
         4: 'Vade',
-        5: 'Opsiyon',
+        5: 'Opsiyon Türü',
         6: 'Strike & Kontrat',
         7: 'Prim & Faiz',
-        8: 'Vade Sonu Fiyat',
+        8: 'Uzlaşma & Vade Sonu',
       };
       return titles[this.wizard.step] || 'Adım';
     },
 
     wizardHint() {
       const hints = {
-        1: 'VIOP veya Tezgahüstü seç.',
-        2: 'Dayanak adı ve türü.',
-        3: 'Spot fiyatı gir.',
+        1: 'VIOP (Borsa) veya OTC (Tezgahüstü) seç.',
+        2: 'Dayanak adı ve türü (Hisse/Döviz).',
+        3: 'Mevcut spot fiyatı gir.',
         4: 'Değerleme tarihi ve vade tarihi.',
-        5: 'CALL/PUT ve Long/Short.',
-        6: 'Strike, kontrat ve çarpan (otomatik öneri).',
-        7: 'Prim ve nemalandırma faiz oranı.',
-        8: 'İstersen vade sonu fiyat girerek uzlaşma etkisini gör.',
+        5: 'CALL/PUT ve Alış(Long)/Satış(Short).',
+        6: 'Kullanım fiyatı ve miktar bilgileri.',
+        7: 'Ödenecek/Alınacak prim ve nakit faizi.',
+        8: 'Uzlaşma yöntemi ve varsa vade sonu fiyatı.',
       };
       return hints[this.wizard.step] || '';
     },
@@ -358,6 +359,7 @@ function opsiyonApp() {
       try {
         const payload = {
           ...this.form,
+          market: this.form.market === 'TEZGAHUSTU' ? 'OTC' : this.form.market,
           settlement_price: this.form.settlement_price ? Number(this.form.settlement_price) : null,
           settings: { ...this.settings },
         };

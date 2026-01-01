@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schemas import CalcIn, CalcOut, Direction, OptionType, UnderlyingType
+from .schemas import CalcIn, CalcOut, Direction, Market, OptionType, SettlementType, UnderlyingType
 
 
 @dataclass(frozen=True)
@@ -37,14 +37,37 @@ def _breakeven(strike: float, per_unit_net: float, option_type: OptionType, dire
 def calculate(inp: CalcIn) -> CalcOut:
     days = (inp.expiry_date - inp.valuation_date).days
 
-    lot_amount = float(inp.contracts * inp.contract_multiplier)
-    notional_tl = lot_amount * float(inp.strike)
-
+    # Scaling logic for VIOP FX
+    strike_scale = 1.0
     premium_scale = 1.0
-    if inp.underlying_type == UnderlyingType.FX:
-        premium_scale = float(inp.settings.fx_premium_scale)
+    
+    # VIOP FX Scaling: 
+    # BIST displays USDTRY strike as 44000.0 (meaning 44.0000)
+    # BIST displays USDTRY premium as 410.0 (meaning 0.4100 TL per unit)
+    # However, for 1 contract (multiplier 1000), 
+    # Notional = 1000 * 44.0 = 44,000 TL
+    # Premium Total = 1000 * 0.4100 = 410 TL
+    # So the scaling is: strike / 1000, premium / 1000
+    
+    if inp.market == Market.VIOP and inp.underlying_type == UnderlyingType.FX:
+        strike_scale = 0.001  # 44000 -> 44.0
+        premium_scale = 0.001 # 410.0 -> 0.41
+    elif inp.market == Market.VIOP and inp.underlying_type == UnderlyingType.EQUITY:
+        # BIST Equity options (e.g. THYAO) usually use direct prices (e.g. 250.0 strike)
+        # and premium is also direct (e.g. 5.50 TL)
+        strike_scale = 1.0
+        premium_scale = 1.0
+    elif inp.market == Market.OTC:
+        # OTC usually uses direct prices, but we can allow settings to override if needed
+        # For now, assume OTC input is direct (scale = 1.0)
+        pass
 
+    strike_actual = float(inp.strike) * strike_scale
     premium_per_unit_tl = float(inp.premium_input) * premium_scale
+    
+    lot_amount = float(inp.contracts * inp.contract_multiplier)
+    notional_tl = lot_amount * strike_actual
+
     premium_gross_tl = premium_per_unit_tl * lot_amount
 
     commission_rate = float(inp.settings.commission_per_mille) / 1000.0
@@ -73,13 +96,13 @@ def calculate(inp: CalcIn) -> CalcOut:
     breakeven_ex_interest_price = None
     if lot_amount > 0:
         breakeven_price = _breakeven(
-            strike=float(inp.strike),
+            strike=strike_actual,
             per_unit_net=(net_return_before_settlement_tl / lot_amount),
             option_type=inp.option_type,
             direction=inp.direction,
         )
         breakeven_ex_interest_price = _breakeven(
-            strike=float(inp.strike),
+            strike=strike_actual,
             per_unit_net=(net_option_premium_tl / lot_amount),
             option_type=inp.option_type,
             direction=inp.direction,
@@ -92,7 +115,7 @@ def calculate(inp: CalcIn) -> CalcOut:
 
     if inp.settlement_price is not None and lot_amount > 0:
         s = float(inp.settlement_price)
-        k = float(inp.strike)
+        k = strike_actual
         intrinsic_per_unit = 0.0
         if inp.option_type == OptionType.CALL:
             intrinsic_per_unit = max(s - k, 0.0)
@@ -100,6 +123,12 @@ def calculate(inp: CalcIn) -> CalcOut:
             intrinsic_per_unit = max(k - s, 0.0)
 
         settlement_cashflow_tl = signs.intrinsic * intrinsic_per_unit * lot_amount
+        
+        # Physical settlement adjustment: 
+        # For physical, the cash flow isn't "received" but the asset is exchanged.
+        # However, the profit/loss calculation remains the same in terms of value.
+        # We will keep settlement_cashflow_tl as the value of the settlement.
+        
         net_profit_after_settlement_tl = net_return_before_settlement_tl + settlement_cashflow_tl
 
         annual_equiv_net_after_settlement = _annualize(net_profit_after_settlement_tl, notional_tl, days)
