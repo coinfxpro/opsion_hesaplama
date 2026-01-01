@@ -37,43 +37,37 @@ def calculate(inp: CalcIn) -> CalcOut:
     premium_scale = 1.0
     
     # VIOP FX Scaling: 
-    # BIST displays USDTRY strike as 44000.0 (meaning 44.0000)
+    # BIST displays USDTRY strike as 44000.0 (meaning 44.0000) or user might enter 44.0
     # BIST displays USDTRY premium as 410.0 (meaning 410 TL per 1 contract of 1000 units)
     
     if inp.market == Market.VIOP and inp.underlying_type == UnderlyingType.FX:
-        # If user enters 44000, scale to 44.0. If they enter 44.0, keep it.
+        # Robust strike handling
         if float(inp.strike) > 1000:
-            strike_scale = 0.001
+            strike_actual = float(inp.strike) / 1000.0
         else:
-            strike_scale = 1.0
+            strike_actual = float(inp.strike)
             
-        # Premium in VIOP FX is ALWAYS "TL per 1 contract" (multiplier units)
-        # So per-unit premium is premium_input / multiplier
-        premium_scale = 1.0 / float(inp.contract_multiplier)
+        # Premium in VIOP FX is "TL per 1 contract" (multiplier units)
+        # 1 contract = multiplier units. So per-unit premium = premium_input / multiplier
+        premium_per_unit_tl = float(inp.premium_input) / float(inp.contract_multiplier)
+        premium_gross_tl = float(inp.premium_input) * float(inp.contracts)
     elif inp.market == Market.VIOP and inp.underlying_type == UnderlyingType.EQUITY:
         # BIST Equity options (e.g. THYAO) usually use direct prices (e.g. 250.0 strike)
         # and premium is also direct (e.g. 5.50 TL)
-        strike_scale = 1.0
-        premium_scale = 1.0
-    elif inp.market == Market.OTC:
-        # OTC usually uses direct prices
-        strike_scale = 1.0
-        premium_scale = 1.0
+        strike_actual = float(inp.strike)
+        premium_per_unit_tl = float(inp.premium_input)
+        premium_gross_tl = premium_per_unit_tl * float(inp.contracts) * float(inp.contract_multiplier)
+    else:
+        # OTC or other markets
+        strike_actual = float(inp.strike)
+        premium_per_unit_tl = float(inp.premium_input)
+        premium_gross_tl = premium_per_unit_tl * float(inp.contracts) * float(inp.contract_multiplier)
 
-    strike_actual = float(inp.strike) * strike_scale
-    premium_per_unit_tl = float(inp.premium_input) * premium_scale
-    
     lot_amount = float(inp.contracts * inp.contract_multiplier)
     notional_tl = lot_amount * strike_actual
 
-    premium_gross_tl = float(inp.premium_input) * float(inp.contracts) if (inp.market == Market.VIOP and inp.underlying_type == UnderlyingType.FX) else (premium_per_unit_tl * lot_amount)
-    # Re-calculate premium_per_unit if we used the contract-based calculation
-    premium_per_unit_tl = premium_gross_tl / lot_amount if lot_amount > 0 else 0.0
-
-    # Commission logic: In VİOP, commissions are often calculated on the PREMIUM amount for options, 
-    # not the Notional. However, some brokers use Notional. 
-    # To be safe and more common for VİOP options, we use PREMIUM as the base.
-    commission_base_tl = premium_gross_tl 
+    # Commission logic: Based on user screenshot, it's calculated on Notional
+    commission_base_tl = notional_tl
     
     commission_rate = float(inp.settings.commission_per_mille) / 1000.0
     commission_total_tl = commission_base_tl * commission_rate * (1.0 + float(inp.settings.bsmv_percent) / 100.0)
@@ -83,13 +77,13 @@ def calculate(inp: CalcIn) -> CalcOut:
     net_option_premium_tl = (signs.premium * premium_gross_tl) - commission_total_tl
 
     # Nema (Interest) logic: 
-    # In VİOP, interest is earned on the cash balance (received premium or collateral).
-    # Since we don't track maintenance margin here, we'll use the absolute net premium as the cash base.
-    nema_base_tl = abs(net_option_premium_tl)
-    
+    # For deposit equivalent comparison, interest should be earned on the cash used for the position.
+    # If SHORT, you receive premium. If LONG, you pay.
+    # However, usually interest is calculated on the collateral (Notional or Margin).
+    # To match user's previous results, we'll use Notional as the interest base.
     nema_gross_tl = 0.0
     if days > 0:
-        nema_gross_tl = nema_base_tl * (float(inp.interest_rate_percent) / 100.0) * (days / 365.0)
+        nema_gross_tl = notional_tl * (float(inp.interest_rate_percent) / 100.0) * (days / 365.0)
 
     stopaj = float(inp.settings.stopaj_percent) / 100.0
     nema_net_tl = nema_gross_tl * (1.0 - stopaj)
